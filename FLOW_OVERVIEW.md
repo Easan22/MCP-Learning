@@ -1,5 +1,7 @@
 # MCP Chat Flow Overview
 
+MCP, or Model Context Protocol, is a standard way for an application to expose structured capabilities to an AI system. Instead of hardwiring one-off integrations directly into model prompts, MCP lets a server describe tools, resources, and prompts in a consistent machine-readable form, while a client connects to that server and uses those capabilities in a predictable way. In practice, that means an app like this one can let a model read documents, edit documents, discover prompt templates, and access named resources through a clean protocol boundary, rather than through ad hoc glue code. A useful way to think about MCP is that it gives the model-facing side of an app a formal interface for "what can be accessed" and "what can be done."
+
 This document explains, in detail, how this repository works when a user types a query into the terminal.
 
 It is written for two audiences:
