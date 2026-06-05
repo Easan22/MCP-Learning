@@ -8,6 +8,8 @@ from mcp.client.stdio import stdio_client
 import json
 from pydantic import AnyUrl
 
+from core.debug import debug_log
+
 
 class MCPClient:
     def __init__(
@@ -28,6 +30,13 @@ class MCPClient:
             args=self._args,
             env=self._env,
         )
+        debug_log(
+            "Starting MCP server process",
+            {
+                "command": self._command,
+                "args": self._args,
+            },
+        )
         stdio_transport = await self._exit_stack.enter_async_context(
             stdio_client(server_params)
         )
@@ -36,6 +45,7 @@ class MCPClient:
             ClientSession(_stdio, _write)
         )
         await self._session.initialize()
+        debug_log("MCP client session initialized")
 
     def session(self) -> ClientSession:
         if self._session is None:
@@ -45,31 +55,44 @@ class MCPClient:
         return self._session
 
     async def list_tools(self) -> list[types.Tool]:
+        debug_log("Requesting MCP tool list")
         result = await self.session().list_tools()
         return result.tools
 
     async def call_tool(
         self, tool_name: str, tool_input
     ) -> types.CallToolResult | None:
+        debug_log(
+            f"Calling MCP tool `{tool_name}`",
+            tool_input,
+        )
         return await self.session().call_tool(tool_name, tool_input)
 
     async def list_prompts(self) -> list[types.Prompt]:
+        debug_log("Requesting MCP prompt list")
         result = await self.session().list_prompts()
         return result.prompts
 
     async def get_prompt(self, prompt_name, args: dict[str, str]):
+        debug_log(
+            f"Requesting MCP prompt `{prompt_name}`",
+            args,
+        )
         result = await self.session().get_prompt(prompt_name, args)
         return result.messages
 
     async def list_resources(self):
+        debug_log("Requesting MCP resource list")
         result = await self.session().list_resources()
         return result.resources
 
     async def list_resource_templates(self):
+        debug_log("Requesting MCP resource template list")
         result = await self.session().list_resource_templates()
         return result.resourceTemplates
 
     async def read_resource(self, uri: str) -> Any:
+        debug_log("Reading MCP resource", uri)
         result = await self.session().read_resource(AnyUrl(uri))
         resource = result.contents[0]
 

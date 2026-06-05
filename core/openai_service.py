@@ -4,6 +4,8 @@ from typing import Any, Awaitable, Callable
 
 from openai import OpenAI
 
+from core.debug import debug_log
+
 
 ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
 
@@ -32,11 +34,23 @@ class OpenAIChatService:
         used_tools = False
 
         while True:
+            debug_log(
+                "Sending Responses API request",
+                self._build_debug_payload(
+                    input_items=input_items,
+                    instructions=instructions,
+                    tools=tools or [],
+                ),
+            )
             response = await asyncio.to_thread(
                 self._create_response,
                 input_items,
                 instructions,
                 tools or [],
+            )
+            debug_log(
+                "Received Responses API output",
+                self._serialize_output_items(getattr(response, "output", [])),
             )
 
             function_calls = [
@@ -57,7 +71,15 @@ class OpenAIChatService:
 
             for tool_call in function_calls:
                 arguments = self._load_arguments(tool_call.arguments)
+                debug_log(
+                    f"Model requested tool `{tool_call.name}`",
+                    arguments,
+                )
                 result = await tool_executor(tool_call.name, arguments)
+                debug_log(
+                    f"Tool `{tool_call.name}` returned",
+                    result,
+                )
                 input_items.append(
                     {
                         "type": "function_call_output",
@@ -157,3 +179,23 @@ class OpenAIChatService:
             return {"raw_arguments": arguments}
 
         return parsed if isinstance(parsed, dict) else {"value": parsed}
+
+    def _build_debug_payload(
+        self,
+        *,
+        input_items: list[dict[str, Any]],
+        instructions: str | None,
+        tools: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "input": input_items,
+        }
+        if instructions:
+            payload["instructions"] = instructions
+        if tools:
+            payload["tools"] = tools
+        if self.reasoning_effort:
+            payload["reasoning"] = {"effort": self.reasoning_effort}
+
+        return payload

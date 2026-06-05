@@ -5,6 +5,7 @@ from typing import Any
 
 from mcp import types
 
+from core.debug import debug_log
 from core.openai_service import OpenAIChatService
 from mcp_client import MCPClient
 
@@ -51,6 +52,14 @@ class CliChat:
         self.prompt_names = sorted(prompt.name for prompt in prompts)
         self.tool_names = sorted(tool.name for tool in tools)
         self._openai_tools = self.openai_service.mcp_tools_to_openai(tools)
+        debug_log(
+            "Refreshed MCP capabilities",
+            {
+                "documents": self.document_ids,
+                "prompts": self.prompt_names,
+                "tools": self.tool_names,
+            },
+        )
 
     async def handle_input(self, text: str) -> str | None:
         text = text.strip()
@@ -58,9 +67,17 @@ class CliChat:
             return ""
 
         if text.startswith("/"):
+            debug_log("Handling slash command", text)
             return await self._handle_command(text[1:])
 
         expanded = await self._expand_document_mentions(text)
+        debug_log(
+            "Handling chat input",
+            {
+                "original_text": text,
+                "expanded_text": expanded,
+            },
+        )
         response, used_tools = await self.openai_service.respond(
             user_text=expanded,
             history=self.history,
@@ -144,6 +161,10 @@ class CliChat:
 
             contents = await self.doc_client.read_resource(
                 f"docs://documents/{doc_id}"
+            )
+            debug_log(
+                f"Expanded @{doc_id} from MCP resource",
+                contents,
             )
             sections.append(
                 f"\n\n<Document id=\"{doc_id}\">\n{contents}\n</Document>"

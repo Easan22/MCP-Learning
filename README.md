@@ -143,3 +143,21 @@ Edit the `mcp_server.py` file to add new documents to the `docs` dictionary.
 
 - The repository now includes the previously missing `core/` package needed by `main.py`.
 - The OpenAI integration uses the Responses API, which OpenAI recommends for new agentic applications: https://platform.openai.com/docs/guides/migrate-to-responses
+
+### Debugging The Flow
+
+If you want to watch the app's control flow while it runs, enable debug logging before launch:
+
+```powershell
+$env:MCP_CHAT_DEBUG="1"
+uv run main.py
+```
+
+That will print:
+
+- when the MCP server process starts
+- when MCP tools, prompts, and resources are requested
+- how `@document` mentions are expanded
+- the Responses API request payload shape
+- the model's structured tool-call output
+- the tool arguments sent to MCP and the returned tool result
