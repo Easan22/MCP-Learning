@@ -116,10 +116,13 @@ class OpenAIChatService:
         input_items = []
 
         for role, text in history:
+            content_type = (
+                "output_text" if role == "assistant" else "input_text"
+            )
             input_items.append(
                 {
                     "role": role,
-                    "content": [{"type": "input_text", "text": text}],
+                    "content": [{"type": content_type, "text": text}],
                 }
             )
 
