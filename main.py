@@ -5,26 +5,30 @@ from dotenv import load_dotenv
 from contextlib import AsyncExitStack
 
 from mcp_client import MCPClient
-from core.claude import Claude
-
+from core.openai_service import OpenAIChatService
 from core.cli_chat import CliChat
 from core.cli import CliApp
 
 load_dotenv()
 
-# Anthropic Config
-claude_model = os.getenv("CLAUDE_MODEL", "")
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+# OpenAI Config
+openai_model = os.getenv("OPENAI_MODEL", "")
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+reasoning_effort = os.getenv("OPENAI_REASONING_EFFORT", "").strip() or None
 
 
-assert claude_model, "Error: CLAUDE_MODEL cannot be empty. Update .env"
-assert anthropic_api_key, (
-    "Error: ANTHROPIC_API_KEY cannot be empty. Update .env"
+assert openai_model, "Error: OPENAI_MODEL cannot be empty. Update .env"
+assert openai_api_key, (
+    "Error: OPENAI_API_KEY cannot be empty. Update .env"
 )
 
 
 async def main():
-    claude_service = Claude(model=claude_model)
+    openai_service = OpenAIChatService(
+        model=openai_model,
+        api_key=openai_api_key,
+        reasoning_effort=reasoning_effort,
+    )
 
     server_scripts = sys.argv[1:]
     clients = {}
@@ -43,15 +47,20 @@ async def main():
 
         for i, server_script in enumerate(server_scripts):
             client_id = f"client_{i}_{server_script}"
+            extra_command, extra_args = (
+                ("uv", ["run", server_script])
+                if os.getenv("USE_UV", "0") == "1"
+                else ("python", [server_script])
+            )
             client = await stack.enter_async_context(
-                MCPClient(command="uv", args=["run", server_script])
+                MCPClient(command=extra_command, args=extra_args)
             )
             clients[client_id] = client
 
         chat = CliChat(
             doc_client=doc_client,
             clients=clients,
-            claude_service=claude_service,
+            openai_service=openai_service,
         )
 
         cli = CliApp(chat)
